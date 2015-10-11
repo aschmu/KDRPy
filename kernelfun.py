@@ -35,6 +35,8 @@ def rbf_dot(X, Y, sigma):
     
     K = Q + R -2*np.dot(X, Y.T)
     
+    K = np.exp(-K/(2*sigma**2))
+    
     return K
  
 
