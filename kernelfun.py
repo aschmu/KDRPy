@@ -19,6 +19,9 @@ def rbf_dot(X, Y, sigma):
     X     --  nxd array
     Y     --  nxd array
     sigma --  kernel width
+    
+    returns:
+    K     --  nxn Gram matrix     
     """
     
     if X.shape[1] != Y.shape[1] :
