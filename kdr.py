@@ -63,10 +63,12 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
             
             Z  = np.dot(X, B)
             Kzw = rbf_dot(Z, Z, np.sqrt(sz2))
-            Kzi = linalg.inv(np.dot(np.dot(Q, Kzw), Q) + eps*n*np.eye(n)) #forget about Kz don't really need it afterwards
+            Kz  = np.dot(np.dot(Q, Kzw), Q)
+            Kzi = linalg.inv(Kz + eps*n*np.eye(n)) #
             
             Ky = rbf_dot(Y, Y, np.sqrt(sy2))
             Ky = np.dot(np.dot(Q, Ky), Q)
+            Ky = (Ky + Ky.T)/2
             #Kyzi = np.dot(Ky, Kzi) inutile de le déclarer
             
             dB = np.zeros((d,K))
