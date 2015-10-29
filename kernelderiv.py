@@ -6,7 +6,7 @@ Created on Thu Oct 29 19:00:45 2015
 """
 
 import numpy as np
-from scipy import linalg
+from scipy import linalg, optimize
 from kernelfun import rbf_dot
 
 
@@ -46,3 +46,50 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps, verbose=True):
     tr = np.sum(L[:K])
     
     return B, tr
+    
+    
+    
+def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
+    """
+    line search step for the minimization of Tr[ Ky(Kz(B)+eps*I)^{-1} ] 
+    where Ky and Kz(B) are the centered Gram matrices
+
+    arguments:
+    X      -- nxd array
+    Ky     -- centered Y Gram matrix
+    sz2    -- (annealed) Gaussian kernel scale factor for Kz Gram matrix
+    B      -- current iteration SDR matrix
+    dB     -- SDR matrix derivative
+    eta    -- upper bound of the minimization region [0, eta]
+    eps    -- regularization term 
+    
+    returns:
+    Bn     -- B - s*dB where s is the stepsize parameter
+    tr     -- trace value for the annealed scale factor sz2
+    
+    """
+
+    n = X.shape[0]
+    Q = np.eye(n) - np.ones((n,n))/n
+    
+    def kdrobjfun1D(s):
+        tmpB = B - s*dB
+        tmpB = linalg.svd(tmpB)[0]
+        Z    = np.dot(X, tmpB)
+        Kz   = rbf_dot(Z, Z, np.sqrt(sz2))
+        Kz   = np.dot(np.dot(Q,Kz), Q)
+        Kz   = (Kz + Kz.T)/2 
+        
+        t = np.sum(Ky*linalg.inv(Kz + n*eps*np.eye(n)))
+        
+        return t
+        
+    res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta), method='bounded')
+    s   = res.X    
+    tr  = res.fun
+    Bn  = B - s*dB
+    
+    return Bn, tr
+    
+    
+        
