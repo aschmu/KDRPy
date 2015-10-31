@@ -98,7 +98,8 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
         return t
     #try adding options to minimize nb of optim steps    
     res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta),
-                                   method='bounded')
+                                   method='bounded', 
+                                   options={'maxiter':ls_maxiter, 'disp':False})
     s   = res.x   
     tr  = res.fun
     Bn  = B - s*dB
