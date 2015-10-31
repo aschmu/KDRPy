@@ -25,7 +25,7 @@ def rbf_dot(X, Y, sigma):
     """
     
     if X.shape[1] != Y.shape[1] :
-        raise ValueError('X and Y must have same dimensions')
+        raise ValueError('X and Y must have the same dimensions')
     
     nx, d = X.shape
     ny    = Y.shape[0]
@@ -43,7 +43,7 @@ def rbf_dot(X, Y, sigma):
     return K
  
 
-def estim_sigmakernel_median(X, nb_samples_max):
+def estim_sigmakernel_median(X, nb_samples_max=300):
     """
     provides an estimate of the Gaussian kernel width parameter based on
     the median of the between-samples distance
