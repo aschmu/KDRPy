@@ -23,7 +23,7 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps):
     sigma_y -- scale factor for the Gaussian kernel associated to Y
     eps     -- regularization factor for matrix inversion
     
-    outputs :
+    returns :
     B       -- initial SDR matrix estimate after gradient descent
     tr      -- corresponding trace value (trace=objective function)        
     
@@ -61,23 +61,24 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps):
     
     
     
-def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
+def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
     """
     line search step for the minimization of Tr[ Ky(Kz(B)+eps*I)^{-1} ] 
     where Ky and Kz(B) are the centered Gram matrices computed using Gaussian kernels 
 
     arguments:
-    X      -- nxd array
-    Ky     -- centered Y Gram matrix
-    sz2    -- (annealed) Gaussian kernel scale factor for Kz Gram matrix
-    B      -- current iteration SDR matrix
-    dB     -- SDR matrix derivative
-    eta    -- upper bound of the minimization region [0, eta]
-    eps    -- regularization term 
+    X          -- nxd array
+    Ky         -- centered Y Gram matrix
+    sz2        -- (annealed) Gaussian kernel scale factor for Kz Gram matrix
+    B          -- current iteration SDR matrix
+    dB         -- SDR matrix derivative
+    eta        -- upper bound of the minimization region [0, eta]
+    eps        -- regularization term 
+    ls_maxiter -- max number of iterations during optimization
     
     returns:
-    Bn     -- B - s*dB where s is the stepsize parameter
-    tr     -- trace value for the annealed scale factor sz2
+    Bn         -- B - s*dB where s is the stepsize parameter
+    tr         -- trace value for the annealed scale factor sz2
     
     """
 
@@ -96,7 +97,8 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
         
         return t
     #try adding options to minimize nb of optim steps    
-    res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta), method='bounded')
+    res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta),
+                                   method='bounded')
     s   = res.x   
     tr  = res.fun
     Bn  = B - s*dB
