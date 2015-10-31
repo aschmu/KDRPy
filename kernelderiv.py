@@ -15,6 +15,18 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps):
     """
     computes initial estimate of SDR matrix by gradient descent
     
+    arguments :
+    X       -- nxd array of n samples, d features
+    Y       -- nxp array of class labels
+    K       -- target dimension of SDR subspace
+    sigma_x -- scale factor for the Gaussian kernel associated to X
+    sigma_y -- scale factor for the Gaussian kernel associated to Y
+    eps     -- regularization factor for matrix inversion
+    
+    outputs :
+    B       -- initial SDR matrix estimate after gradient descent
+    tr      -- corresponding trace value (trace=objective function)        
+    
     """
     
     n, d = X.shape
@@ -52,7 +64,7 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps):
 def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
     """
     line search step for the minimization of Tr[ Ky(Kz(B)+eps*I)^{-1} ] 
-    where Ky and Kz(B) are the centered Gram matrices
+    where Ky and Kz(B) are the centered Gram matrices computed using Gaussian kernels 
 
     arguments:
     X      -- nxd array
