@@ -1,10 +1,25 @@
 # -*- coding: utf-8 -*-
 """
 
-Kernel Dimension Reduction (KDR) routines
+Kernel Dimension Reduction (KDR) 
+----------------------------------
 
-see "Kernel dimension reduction in regression" by K.Fukumizu, Bach F.
- and M.I. Jordan, Annals of Statistics, 2009
+Performs sufficient dimension reduction for the regression/classification 
+of Y (response) on X where X is a vector of predictors in R^d, and d>>1 possibly.
+The goal is to find low rank matrix B such that B^TX is a sufficient predictor of Y
+i.e. Y|X ~ Y|B^TX. 
+The method proceeds by minimizing Tr[ Ky(Kz(B)+eps*I_n)^{-1} ] w.r.t B
+Ky and Kz are (characteristic) kernels associated to Y and Z=B^TX, eps is a
+regularization parameter and n is the sample size.
+
+This implementation assumes Gaussian kernels and is based on K. Fukumizu's matlab code.
+
+References:
+-----------
+
+"Kernel dimension reduction in regression" by K.Fukumizu, Bach F.
+and M.I. Jordan, Annals of Statistics, 2009
+
 
 @author: Achille
 """
@@ -20,93 +35,114 @@ from matplotlib import pyplot as plt
 def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
               eta, anl, verbose = True, tol=1e-9, 
               init_deriv = False, ls_maxiter=30):
+    """                                             
+    arguments :
+    X           -- nxd array of n samples, d features
+    Y           -- nxp array of class labels
+    K           -- target dimension of SDR subspace
+    max_loop    -- maximum number of iterations    
+    sigma_x     -- scale factor for the Gaussian kernel associated to X (float)
+    sigma_y     -- scale factor for the Gaussian kernel associated to Y (float)
+    eps         -- regularization factor for matrix inversion (float)
+    eta         -- upper bound for linesearch step parameter (float)
+    anl         -- maximum annealing parameter (int/float)
+    verbose     -- print objective function value at each iteration ? (bool)
+    tol         -- stopping criterion for gradient descent, ie 
+                   optim stops when ||dB||_s> tol (float) where ||dB||_s is the
+                   spectral norm
+    init_deriv  -- use initial estimate of B through gradient descent ? (bool)
+    ls_maxiter  -- max number of iterations during line search step size selection (int)
     
-        n, d  = X.shape
-        
-        if n != Y.shape[0]:
-            raise ValueError, 'X and Y have incompatible dimensions'
-         
-        assert K<=d, 'dimension K must be lower than d !'
-        assert sigma_x > 0 and sigma_y > 0, 'scale parameters must be positive!'
-        assert tol > 0, 'tolerance factor must be >0'
-        
-        if init_deriv:
-            print 'Initialization by derivative method...\n'
-            B, t = kernel_derivative(X, Y, K, np.sqrt(anl)*sigma_x,
-                                     sigma_y, eps)
-        else:            
-            B = np.random.randn(d, K)
-        
-        B = linalg.svd(B, full_matrices=False)[0]
-                
-        unit = np.ones((n,n))
-        Q = np.eye(n) - unit/n
-        
-        """Gram matrix of Y"""
-        Gy  = rbf_dot(Y, Y, sigma_y) #check this 
-        Kyo = np.dot(np.dot(Q, Gy), Q)
-        Kyo  = (Kyo + Kyo.T)/2
-        
-        """objective function initial value """
-        Z = np.dot(X, B)
+    returns :
+    B           -- SDR matrix estimate 
+    
+    """
+    n, d  = X.shape
+            
+    if n != Y.shape[0]:
+        raise ValueError, 'X and Y have incompatible dimensions'
+     
+    assert K<=d, 'dimension K must be lower than d !'
+    assert sigma_x > 0 and sigma_y > 0, 'scale parameters must be positive!'
+    assert tol > 0, 'tolerance factor must be >0'
+    
+    if init_deriv:
+        print 'Initialization by derivative method...\n'
+        B, t = kernel_derivative(X, Y, K, np.sqrt(anl)*sigma_x,
+                                 sigma_y, eps)
+    else:            
+        B = np.random.randn(d, K)
+    
+    B = linalg.svd(B, full_matrices=False)[0]
+            
+    unit = np.ones((n,n))
+    Q = np.eye(n) - unit/n
+    
+    """Gram matrix of Y"""
+    Gy  = rbf_dot(Y, Y, sigma_y) #check this 
+    Kyo = np.dot(np.dot(Q, Gy), Q)
+    Kyo  = (Kyo + Kyo.T)/2
+    
+    """objective function initial value """
+    Z = np.dot(X, B)
 #        nZ = Z/np.sqrt(2)/sigma_x1
-        Gz = rbf_dot(Z, Z, sigma_x)
-        Kz = np.dot(np.dot(Q, Gz), Q)
-        Kz = (Kz + Kz.T)/2
+    Gz = rbf_dot(Z, Z, sigma_x)
+    Kz = np.dot(np.dot(Q, Gz), Q)
+    Kz = (Kz + Kz.T)/2
+    
+    mz = linalg.inv(Kz + eps*n*np.eye(n))
+    tr = np.sum(Kyo*mz)
+    
+    if verbose:
+        print '[0]trace = ', tr
+    
+    ssz2 = 2*sigma_x**2
+    ssy2 = 2*sigma_y**2
+    #careful h from 0 to maxloop-1, implement accordingly
+    for h in xrange(max_loop): 
+        sz2 = ssz2+(anl-1)*ssz2*(max_loop-h-1)/max_loop
+        sy2 = ssy2+(anl-1)*ssy2*(max_loop-h-1)/max_loop
         
-        mz = linalg.inv(Kz + eps*n*np.eye(n))
-        tr = np.sum(Kyo*mz)
+        Z  = np.dot(X, B)
+        Kzw = rbf_dot(Z, Z, np.sqrt(sz2))
+        Kz  = np.dot(np.dot(Q, Kzw), Q)
+        Kzi = linalg.inv(Kz + eps*n*np.eye(n)) #
         
+        Ky = rbf_dot(Y, Y, np.sqrt(sy2))
+        Ky = np.dot(np.dot(Q, Ky), Q)
+        Ky = (Ky + Ky.T)/2
+        Kyzi = np.dot(Ky, Kzi) #inutile de le déclarer
+        
+        dB = np.zeros((d,K))
+        #KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
+        
+        for a in xrange(d):
+            Xa = np.tile(X[:,a][:,np.newaxis], (1, n))
+            XX = Xa - Xa.T
+            for b in xrange(K):
+                Zb = np.tile(Z[:,b][:,np.newaxis], (1, n))
+                tt = XX*(Zb - Zb.T)*Kzw
+                dKB = np.dot(Q, np.dot(tt, Q))
+                dB[a, b] = np.trace(np.dot(Kzi.dot(Kyzi),dKB))  #np.sum(KziKyzi*dKB.T)
+        
+        nm = linalg.norm(dB, 2)
+        if nm < tol:
+            break
+        B, tr = KDR_linesearch(X, Ky, sz2, B, dB/nm, eta, eps,
+                               ls_maxiter=ls_maxiter)
+        B = linalg.svd(B, full_matrices=False)[0]
+       
+        """ compute trace with unannealed parameter"""
         if verbose:
-            print '[0] trace = ', tr
-        
-        ssz2 = 2*sigma_x**2
-        ssy2 = 2*sigma_y**2
-        #careful h from 0 to maxloop-1, implement accordingly
-        for h in xrange(max_loop): 
-            sz2 = ssz2+(anl-1)*ssz2*(max_loop-h-1)/max_loop
-            sy2 = ssy2+(anl-1)*ssy2*(max_loop-h-1)/max_loop
-            
-            Z  = np.dot(X, B)
-            Kzw = rbf_dot(Z, Z, np.sqrt(sz2))
-            Kz  = np.dot(np.dot(Q, Kzw), Q)
-            Kzi = linalg.inv(Kz + eps*n*np.eye(n)) #
-            
-            Ky = rbf_dot(Y, Y, np.sqrt(sy2))
-            Ky = np.dot(np.dot(Q, Ky), Q)
-            Ky = (Ky + Ky.T)/2
-            Kyzi = np.dot(Ky, Kzi) #inutile de le déclarer
-            
-            dB = np.zeros((d,K))
-            #KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
-            
-            for a in xrange(d):
-                Xa = np.tile(X[:,a][:,np.newaxis], (1, n))
-                XX = Xa - Xa.T
-                for b in xrange(K):
-                    Zb = np.tile(Z[:,b][:,np.newaxis], (1, n))
-                    tt = XX*(Zb - Zb.T)*Kzw
-                    dKB = np.dot(Q, np.dot(tt, Q))
-                    dB[a, b] = np.trace(np.dot(Kzi.dot(Kyzi),dKB))  #np.sum(KziKyzi*dKB.T)
-            
-            nm = linalg.norm(dB, 2)
-            if nm < tol:
-                break
-            B, tr = KDR_linesearch(X, Ky, sz2, B, dB/nm, eta, eps,
-                                   ls_maxiter=ls_maxiter)
-            B = linalg.svd(B, full_matrices=False)[0]
-           
-            """ compute trace with unannealed parameter"""
-            if verbose:
-                Z = np.dot(X, B)
-                Kz = rbf_dot(Z, Z, sigma_x)
-                Kz = np.dot(np.dot(Q, Kz), Q)
-                Kz = (Kz + Kz.T)/2
-                mz = linalg.inv(Kz + n*eps*np.eye(n))
-                tr = np.sum(Kyo*mz)
-                print '[%d] trace = %.6f \n'  % (h+1,tr) 
-        
-        return B
+            Z = np.dot(X, B)
+            Kz = rbf_dot(Z, Z, sigma_x)
+            Kz = np.dot(np.dot(Q, Kz), Q)
+            Kz = (Kz + Kz.T)/2
+            mz = linalg.inv(Kz + n*eps*np.eye(n))
+            tr = np.sum(Kyo*mz)
+            print '[%d]trace = %.6f'  % (h+1,tr) 
+    
+    return B
         
         
 if __name__ == "__main__":
