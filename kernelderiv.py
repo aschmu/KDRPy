@@ -11,7 +11,7 @@ from kernelfun import rbf_dot
 
 
 
-def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps, verbose=True):
+def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps):
     """
     computes initial estimate of SDR matrix by gradient descent
     
@@ -26,24 +26,24 @@ def kernel_derivative(X, Y, K, sigma_x, sigma_y, eps, verbose=True):
     Ky = rbf_dot(Y, Y, sigma_y)
     
     #Derivative of Kx(xi, x) w.r.t. x
-    Dx = np.reshape(np.tile(X, n, 1), (n,n,d))
-    Xij = Dx - Dx.transpose((0, 2, 1))
+    Dx = np.reshape(np.tile(X, (n, 1)), (n,n,d))
+    Xij = Dx - Dx.transpose((1, 0, 2))
     Xij = Xij/(sigma_x**2)
-    H = Xij*np.reshape(np.tile(Kx, 1, d), (n,n,d))
+    H = H = Xij*np.reshape(np.tile(Kx,( 1, d)), (n,n,d)) #Xij*np.tile(Kx,(1,1,d)) #
     
     #sum_i H(X_i)'*Kxi*Ky*Kxi*H(X_i)
     
     Fmat = np.dot(Kxi, np.dot(Ky, Kxi))
     Hd = H.reshape((n, n*d))
     HH = np.reshape(np.dot(Hd.T, Hd), (n,d,n,d))
-    HHd = np.reshape(np.transpose(HH, (1,3,2,4)), (n**2,d,d)) 
-    Fd = np.reshape(np.reshape(Fmat, (n**2,1)), (n**2,d,d))
+    HHd = np.reshape(np.transpose(HH, (0,2,1,3)), (n**2,d,d)) 
+    Fd = np.tile(np.reshape(Fmat, (n**2,1,1)), (1,d,d))
     
     R = np.reshape(np.sum(HHd*Fd, axis=0), (d,d))
     L, V = linalg.eigh(R)
     B = V[:,::-1][:,:K]
     L = L[::-1]
-    tr = np.sum(L[:K])
+    tr = np.sum(L[:K])    
     
     return B, tr
     
@@ -74,7 +74,7 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
     
     def kdrobjfun1D(s):
         tmpB = B - s*dB
-        tmpB = linalg.svd(tmpB)[0]
+        tmpB = linalg.svd(tmpB, full_matrices=False)[0]
         Z    = np.dot(X, tmpB)
         Kz   = rbf_dot(Z, Z, np.sqrt(sz2))
         Kz   = np.dot(np.dot(Q,Kz), Q)
@@ -83,9 +83,9 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps):
         t = np.sum(Ky*linalg.inv(Kz + n*eps*np.eye(n)))
         
         return t
-        
+    #try adding options to minimize nb of optim steps    
     res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta), method='bounded')
-    s   = res.X    
+    s   = res.x   
     tr  = res.fun
     Bn  = B - s*dB
     
