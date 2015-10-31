@@ -13,7 +13,8 @@ from scipy.spatial.distance import pdist
 
 def rbf_dot(X, Y, sigma):
     """
-    computes Gram matrix using a Gaussian kernel
+    computes Gram matrix K using a Gaussian kernel
+    K_ij = exp(-||X[:,i]-Y[:,j]||^2/(2*sigma^2))
     
     arguments:
     X     --  nxd array
@@ -52,6 +53,10 @@ def estim_sigmakernel_median(X, nb_samples_max=300):
     X               -- n x d array
     nb_samples_max  -- number of maximum samples used for the computation 
                         of the median
+                        
+    returns:
+    sigma           -- Gaussian kernel scale factor
+    
     """
     
     m = X.shape[0]
