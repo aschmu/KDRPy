@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 
 def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
               eta, anl, verbose = True, tol=1e-9, 
-              init_deriv = False):
+              init_deriv = False, ls_maxiter=30):
     
         n, d  = X.shape
         
@@ -92,7 +92,8 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
             nm = linalg.norm(dB, 2)
             if nm < tol:
                 break
-            B, tr = KDR_linesearch(X, Ky, sz2, B, dB/nm, eta, eps)
+            B, tr = KDR_linesearch(X, Ky, sz2, B, dB/nm, eta, eps,
+                                   ls_maxiter=ls_maxiter)
             B = linalg.svd(B, full_matrices=False)[0]
            
             """ compute trace with unannealed parameter"""
@@ -103,7 +104,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
                 Kz = (Kz + Kz.T)/2
                 mz = linalg.inv(Kz + n*eps*np.eye(n))
                 tr = np.sum(Kyo*mz)
-                print '[%d] trace = %.6f \n'  % (h,tr) 
+                print '[%d] trace = %.6f \n'  % (h+1,tr) 
         
         return B
         
@@ -126,8 +127,8 @@ if __name__ == "__main__":
     d = X.shape[1]
     N = X.shape[0]
     
-    print d, 'features\n'
-    print N, 'samples\n'
+    print d, 'features'
+    print N, 'samples'
 
     #standardize data
     std_scaler = preprocessing.StandardScaler().fit(X)    
