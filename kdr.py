@@ -48,7 +48,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
     anl         -- maximum annealing parameter (int/float)
     verbose     -- print objective function value at each iteration ? (bool)
     tol         -- stopping criterion for gradient descent, ie 
-                   optim stops when ||dB||_s> tol (float) where ||dB||_s is the
+                   optim stops when ||dB||_s < tol (float) where ||.||_s is the
                    spectral norm
     init_deriv  -- use initial estimate of B through gradient descent ? (bool)
     ls_maxiter  -- max number of iterations during line search step size selection (int)
@@ -111,10 +111,10 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
         Ky = rbf_dot(Y, Y, np.sqrt(sy2))
         Ky = np.dot(np.dot(Q, Ky), Q)
         Ky = (Ky + Ky.T)/2
-        Kyzi = np.dot(Ky, Kzi) #inutile de le déclarer
+        #Kyzi = np.dot(Ky, Kzi) #inutile de le déclarer
         
         dB = np.zeros((d,K))
-        #KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
+        KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
         
         for a in xrange(d):
             Xa = np.tile(X[:,a][:,np.newaxis], (1, n))
@@ -123,7 +123,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
                 Zb = np.tile(Z[:,b][:,np.newaxis], (1, n))
                 tt = XX*(Zb - Zb.T)*Kzw
                 dKB = np.dot(Q, np.dot(tt, Q))
-                dB[a, b] = np.trace(np.dot(Kzi.dot(Kyzi),dKB))  #np.sum(KziKyzi*dKB.T)
+                dB[a, b] = np.sum(KziKyzi*dKB.T) #np.trace(np.dot(Kzi.dot(Kyzi),dKB))  #
         
         nm = linalg.norm(dB, 2)
         if nm < tol:
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     
     B = kdr_optim(X=Xscaled, Y=y, K=r, max_loop=max_iter, sigma_x=sigma_X*np.sqrt(np.float(r)/d), 
                   sigma_y=sigma_y, eps=epsilon, eta=eta_linesearch, 
-                  anl=annealing, init_deriv=True)
+                  anl=annealing, init_deriv=False)
         
     r = 2 #SDR subspace dimension
     l = 3 #nb classes in data
