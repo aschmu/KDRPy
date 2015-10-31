@@ -74,7 +74,7 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
     dB         -- SDR matrix derivative
     eta        -- upper bound of the minimization region [0, eta]
     eps        -- regularization term 
-    ls_maxiter -- max number of iterations during optimization
+    ls_maxiter -- max number of iterations during line search step size selection
     
     returns:
     Bn         -- B - s*dB where s is the stepsize parameter
