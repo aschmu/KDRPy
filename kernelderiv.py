@@ -82,8 +82,7 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
     
     """
 
-    n = X.shape[0]
-    #Q = np.eye(n) - np.ones((n,n))/n
+    n = X.shape[0]    
     
     def kdrobjfun1D(s):
         tmpB = B - s*dB
@@ -96,7 +95,7 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
         t = np.sum(Ky*linalg.inv(Kz + n*eps*np.eye(n)))
         
         return t
-    #try adding options to minimize nb of optim steps    
+      
     res = optimize.minimize_scalar(kdrobjfun1D, bounds=(0, eta),
                                    method='bounded', 
                                    options={'maxiter':ls_maxiter, 'disp':False})
