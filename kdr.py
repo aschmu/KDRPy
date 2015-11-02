@@ -26,7 +26,7 @@ and M.I. Jordan, Annals of Statistics, 2009
 
 import numpy as np
 from scipy import linalg
-from kernelfun import rbf_dot, estim_sigmakernel_median
+from kernelfun import rbf_dot, estim_sigmakernel_median, center_matrix
 from kernelderiv import kernel_derivative, KDR_linesearch
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
@@ -74,20 +74,16 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
         B = np.random.randn(d, K)
     
     B = linalg.svd(B, full_matrices=False)[0]
-            
-    unit = np.ones((n,n))
-    Q = np.eye(n) - unit/n
-    
+                
     """Gram matrix of Y"""
-    Gy  = rbf_dot(Y, Y, sigma_y) #check this 
-    Kyo = np.dot(np.dot(Q, Gy), Q)
+    Gy  = rbf_dot(Y, Y, sigma_y) 
+    Kyo = center_matrix(Gy) 
     Kyo  = (Kyo + Kyo.T)/2
     
     """objective function initial value """
     Z = np.dot(X, B)
-#        nZ = Z/np.sqrt(2)/sigma_x1
     Gz = rbf_dot(Z, Z, sigma_x)
-    Kz = np.dot(np.dot(Q, Gz), Q)
+    Kz = center_matrix(Gz) 
     Kz = (Kz + Kz.T)/2
     
     mz = linalg.inv(Kz + eps*n*np.eye(n))
@@ -105,13 +101,13 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
         
         Z  = np.dot(X, B)
         Kzw = rbf_dot(Z, Z, np.sqrt(sz2))
-        Kz  = np.dot(np.dot(Q, Kzw), Q)
+        Kz  = center_matrix(Kzw) 
         Kzi = linalg.inv(Kz + eps*n*np.eye(n)) #
         
         Ky = rbf_dot(Y, Y, np.sqrt(sy2))
-        Ky = np.dot(np.dot(Q, Ky), Q)
+        Ky = center_matrix(Ky) 
         Ky = (Ky + Ky.T)/2
-        #Kyzi = np.dot(Ky, Kzi) #inutile de le déclarer
+         
         
         dB = np.zeros((d,K))
         KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
@@ -122,7 +118,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
             for b in xrange(K):
                 Zb = np.tile(Z[:,b][:,np.newaxis], (1, n))
                 tt = XX*(Zb - Zb.T)*Kzw
-                dKB = np.dot(Q, np.dot(tt, Q))
+                dKB = center_matrix(tt) 
                 dB[a, b] = np.sum(KziKyzi*dKB.T) #np.trace(np.dot(Kzi.dot(Kyzi),dKB))  #
         
         nm = linalg.norm(dB, 2)
@@ -136,7 +132,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
         if verbose:
             Z = np.dot(X, B)
             Kz = rbf_dot(Z, Z, sigma_x)
-            Kz = np.dot(np.dot(Q, Kz), Q)
+            Kz = center_matrix(Kz) #np.dot(np.dot(Q, Kz), Q)
             Kz = (Kz + Kz.T)/2
             mz = linalg.inv(Kz + n*eps*np.eye(n))
             tr = np.sum(Kyo*mz)
@@ -163,8 +159,7 @@ if __name__ == "__main__":
     d = X.shape[1]
     N = X.shape[0]
     
-    print d, 'features'
-    print N, 'samples'
+    print d, 'features,', N, 'samples and', 3, 'classes'
 
     #standardize data
     std_scaler = preprocessing.StandardScaler().fit(X)    
@@ -176,16 +171,15 @@ if __name__ == "__main__":
     
     B = kdr_optim(X=Xscaled, Y=y, K=r, max_loop=max_iter, sigma_x=sigma_X*np.sqrt(np.float(r)/d), 
                   sigma_y=sigma_y, eps=epsilon, eta=eta_linesearch, 
-                  anl=annealing, init_deriv=False)
-        
-    r = 2 #SDR subspace dimension
-    l = 3 #nb classes in data
-    
+                  anl=annealing, verbose=verbose, init_deriv=False)
+           
     Z = np.dot(Xscaled, B)
-    plt.scatter(Z[np.ravel(y)==1,0], Z[np.ravel(y)==1,1], color="blue")
-    plt.scatter(Z[np.ravel(y)==2,0], Z[np.ravel(y)==2,1], color="red")
-    plt.scatter(Z[np.ravel(y)==3,0], Z[np.ravel(y)==3,1], color="green")
-
+    plt.scatter(Z[np.ravel(y)==1,0], Z[np.ravel(y)==1,1], color="blue", label='class 1')
+    plt.scatter(Z[np.ravel(y)==2,0], Z[np.ravel(y)==2,1], color="red", label='class 2')
+    plt.scatter(Z[np.ravel(y)==3,0], Z[np.ravel(y)==3,1], color="green", label='class 3')
+    plt.xlabel('Z_1')
+    plt.ylabel('Z_2')
+    plt.title('Projections of wine data on first 2 SDR directions')
+    plt.legend()
     
-    #fig = plt.figure()
     
