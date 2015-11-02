@@ -43,7 +43,28 @@ def rbf_dot(X, Y, sigma):
     
     return K
  
-
+def center_matrix(K):
+    """
+    computes the centered kernel matrix defined by Kc = H*K*H where
+    H = I_n - (1/n)U_n where U_n is the 'all-ones' matrix
+    
+    arguments:
+    K        -- Gram matrix
+    
+    returns:
+    Kc       -- centered Gram matrix
+    """
+    
+    n       = K.shape[0]
+    colsumK = np.sum(K, axis=1)
+    sumK    = np.sum(colsumK)
+    
+    return K - np.add.outer(colsumK, colsumK)/n - sumK/(n**2)
+    
+    
+    
+    
+    
 def estim_sigmakernel_median(X, nb_samples_max=300):
     """
     provides an estimate of the Gaussian kernel width parameter based on
@@ -71,4 +92,5 @@ def estim_sigmakernel_median(X, nb_samples_max=300):
     
     return sigma
     
-    
+ 
+   
