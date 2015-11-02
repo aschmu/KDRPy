@@ -7,7 +7,7 @@ Created on Thu Oct 29 19:00:45 2015
 
 import numpy as np
 from scipy import linalg, optimize
-from kernelfun import rbf_dot
+from kernelfun import rbf_dot, center_matrix
 
 
 
@@ -83,14 +83,14 @@ def KDR_linesearch(X, Ky, sz2, B, dB, eta, eps, ls_maxiter):
     """
 
     n = X.shape[0]
-    Q = np.eye(n) - np.ones((n,n))/n
+    #Q = np.eye(n) - np.ones((n,n))/n
     
     def kdrobjfun1D(s):
         tmpB = B - s*dB
         tmpB = linalg.svd(tmpB, full_matrices=False)[0]
         Z    = np.dot(X, tmpB)
         Kz   = rbf_dot(Z, Z, np.sqrt(sz2))
-        Kz   = np.dot(np.dot(Q,Kz), Q)
+        Kz   = center_matrix(Kz) #np.dot(np.dot(Q,Kz), Q)
         Kz   = (Kz + Kz.T)/2 
         
         t = np.sum(Ky*linalg.inv(Kz + n*eps*np.eye(n)))
