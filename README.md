@@ -1,4 +1,4 @@
-Kernel Dimension Reduction  
+## Kernel Dimension Reduction  
 
 
 Routines for sufficient dimension reduction as proposed by Fukumizu et al. 
