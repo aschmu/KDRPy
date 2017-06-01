@@ -23,14 +23,14 @@ and M.I. Jordan, Annals of Statistics, 2009
 
 @author: Achille
 """
-
+#from __future__ import print_function
 import numpy as np
 from scipy import linalg
 from kernelfun import rbf_dot, estim_sigmakernel_median, center_matrix
 from kernelderiv import kernel_derivative, KDR_linesearch
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
-
+from builtins import range
 
 def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
               eta, anl, verbose = True, tol=1e-9, 
@@ -60,14 +60,14 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
     n, d  = X.shape
             
     if n != Y.shape[0]:
-        raise ValueError, 'X and Y have incompatible dimensions'
+        raise(ValueError('X and Y have incompatible dimensions'))
      
     assert K<=d, 'dimension K must be lower than d !'
     assert sigma_x > 0 and sigma_y > 0, 'scale parameters must be positive!'
     assert tol > 0, 'tolerance factor must be >0'
     
     if init_deriv:
-        print 'Initialization by derivative method...\n'
+        print('Initialization by derivative method...\n')
         B, t = kernel_derivative(X, Y, K, np.sqrt(anl)*sigma_x,
                                  sigma_y, eps)
     else:            
@@ -90,12 +90,12 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
     tr = np.sum(Kyo*mz)
     
     if verbose:
-        print '[0]trace = ', tr
+        print('[0]trace = {}'.format(tr))
     
     ssz2 = 2*sigma_x**2
     ssy2 = 2*sigma_y**2
     #careful h from 0 to maxloop-1, implement accordingly
-    for h in xrange(max_loop): 
+    for h in range(max_loop): 
         sz2 = ssz2+(anl-1)*ssz2*(max_loop-h-1)/max_loop
         sy2 = ssy2+(anl-1)*ssy2*(max_loop-h-1)/max_loop
         
@@ -112,10 +112,10 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
         dB = np.zeros((d,K))
         KziKyzi = np.dot(Kzi, np.dot(Ky, Kzi))
         
-        for a in xrange(d):
+        for a in range(d):
             Xa = np.tile(X[:,a][:,np.newaxis], (1, n))
             XX = Xa - Xa.T
-            for b in xrange(K):
+            for b in range(K):
                 Zb = np.tile(Z[:,b][:,np.newaxis], (1, n))
                 tt = XX*(Zb - Zb.T)*Kzw
                 dKB = center_matrix(tt) 
@@ -136,7 +136,7 @@ def kdr_optim(X, Y, K, max_loop, sigma_x, sigma_y, eps,
             Kz = (Kz + Kz.T)/2
             mz = linalg.inv(Kz + n*eps*np.eye(n))
             tr = np.sum(Kyo*mz)
-            print '[%d]trace = %.6f'  % (h+1,tr) 
+            print('[%d]trace = %.6f'  % (h+1,tr) )
     
     return B
         
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     r = 2 #dimension of SDR subspace
     
     
-    print 'KDR demo using wine data from UCI Repository \n'
+    print('KDR demo using wine data from UCI Repository')
     
     data = np.genfromtxt(fname='./data/wine_data.csv', delimiter=",")    
     y = data[:, 0][:,np.newaxis]
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     d = X.shape[1]
     N = X.shape[0]
     
-    print d, 'features,', N, 'samples and', 3, 'classes'
+    print(d, 'features,', N, 'samples and', 3, 'classes')
 
     #standardize data
     std_scaler = preprocessing.StandardScaler().fit(X)    

@@ -1,3 +1,4 @@
 get_winedata.py
 *.pyc
 kdr_callgraph.py
+__pycache__/

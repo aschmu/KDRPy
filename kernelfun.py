@@ -26,7 +26,7 @@ def rbf_dot(X, Y, sigma):
     """
     
     if X.shape[1] != Y.shape[1] :
-        raise ValueError('X and Y must have the same dimensions')
+        raise(ValueError('X and Y must have the same dimensions'))
     
     nx, d = X.shape
     ny    = Y.shape[0]
